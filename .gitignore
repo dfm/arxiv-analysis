@@ -1,0 +1,13 @@
+*.xml
+.DS_Store
+*.pyc
+*.swp
+local.sh
+remote.sh
+bin
+build
+include
+lib
+.Python
+*.pxm
+arxiv/*
