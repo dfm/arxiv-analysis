@@ -22,7 +22,7 @@ arxiv_ns = lambda x: './/{http://arxiv.org/OAI/arXiv/}'+x
 fields = ['title', 'abstract', 'id', 'license']
 dates  = ['created', 'updated']
 strip_chars = r"""+$^_-*~@.,()[]{}<>`\|/"'=1234567890%?!# """
-stopwords = nltk.corpus.stopwords.words('english')
+stopwords = [w.strip() for w in open("stopwords.txt")] # nltk.corpus.stopwords.words('english')
 stemmer = nltk.stem.LancasterStemmer()
 
 def analyse_listings(fn='arXiv_recent', n=1):
