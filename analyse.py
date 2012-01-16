@@ -60,7 +60,7 @@ def analyse_listings(fn='arXiv_recent', n=1):
             # push doc to MongoDB
             doc["_id"] = db.doc_counter()
             db.listings.update({"_id": doc["_id"]}, doc, upsert=True)
-            print time.time()-strt,"seconds"
+            # print time.time()-strt,"seconds"
 
 def extract_features(doc):
     if "abstract" not in doc or "title" not in doc:

@@ -7,11 +7,6 @@ Database connections
 import numpy as np
 
 import pymongo
-try:
-    import redis
-except:
-    redis = None
-
 import config
 
 # The characters used to generate the unique ids for the papers
@@ -24,15 +19,6 @@ nchars = len(chars)
 db = pymongo.Connection(config.SERVER, config.PORT)[config.DATABASE]
 if config.USERNAME != 'None':
     db.authenticate(config.USERNAME,config.PASSWORD)
-
-# Redis DB for caching
-if redis is not None:
-    rkws = {'host': config.REDIS_SERVER, 'port': config.REDIS_PORT}
-    if config.REDIS_PASS != 'None':
-        rkws['password'] = config.REDIS_PASS
-    rpool = redis.ConnectionPool(**rkws)
-    redisdb = redis.Redis(connection_pool=rpool)
-    redispipe = redisdb.pipeline()
 
 # listings
 listings = db["listings"]
