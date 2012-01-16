@@ -1,2 +1,2 @@
-web: gunicorn app:app -b "0.0.0.0:$PORT"
+worker: ./get_and_analyse.py
 
