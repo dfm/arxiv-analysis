@@ -10,7 +10,8 @@ s = sched.scheduler(time.time, time.sleep)
 
 def get_time():
     d = datetime.datetime.now()
-    d += datetime.timedelta(days=1)
+    if d.hour >= 21:
+        d += datetime.timedelta(days=1)
     d = d.replace(hour=21, minute=0, second=0)
     t = time.mktime(d.timetuple())
     return t
