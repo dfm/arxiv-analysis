@@ -35,15 +35,23 @@ def analyse_listings(fn='arXiv_recent', n=1):
         records = tree.findall(root_ns('record'))
         for record in records:
             doc = {}
+
+            # grad the timestamps
             for d in dates:
                 el = record.find(dates[d])
                 if el is not None:
                     doc[d] = datetime.datetime.strptime(el.text, '%Y-%m-%d')
+
+            # other text fields
             for f in fields:
                 el = record.find(arxiv_ns(f))
                 if el is not None:
                     doc[f] = el.text
+
+            # the categories
             doc["categories"] = record.find(arxiv_ns("categories")).text.split()
+
+            # authors
             authors = record.find(arxiv_ns("authors"))
             doc["authors"] = []
             for a in authors.findall(arxiv_ns("author")):
@@ -56,8 +64,18 @@ def analyse_listings(fn='arXiv_recent', n=1):
                 if affil is not None:
                     tmpdoc["affiliation"] = affil.text
                 doc["authors"].append(tmpdoc)
+
+            # feature extraction
             doc = extract_features(doc)
+
+            # find previous versions
+            versions = [v["_id"] for v in db.listings.find({"id": doc["id"]}, {"_id": 1})]
+            if len(versions) > 0:
+                doc["versions"] = versions
+
+            # update the corpus
             db.corpus.update({"_id": 0}, {"$inc": doc["vector"]}, upsert=True, safe=True)
+
             # push doc to MongoDB
             doc["_id"] = db.doc_counter()
             db.listings.update({"_id": doc["_id"]}, doc, upsert=True)

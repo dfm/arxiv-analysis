@@ -21,7 +21,7 @@ timedelta = datetime.timedelta(1)
 resumption = re.compile(".*<resumptionToken.*?>(.*?)</resumptionToken>.*")
 
 def get_recent_listings(out_fn='arXiv_recent', maxdepth=40):
-    date = (datetime.datetime.utcnow()-timedelta).strftime("%Y-%m-%d")
+    date = (datetime.datetime.utcnow()).strftime("%Y-%m-%d")
     requestBody =        {'verb': 'ListRecords',
                           'from': date,
                 'metadataPrefix': 'arXiv'}
