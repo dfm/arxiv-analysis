@@ -21,7 +21,7 @@ root_ns  = lambda x: './/{http://www.openarchives.org/OAI/2.0/}'+x
 arxiv_ns = lambda x: './/{http://arxiv.org/OAI/arXiv/}'+x
 fields = ['title', 'abstract', 'id', 'license']
 dates  = ['created', 'updated']
-strip_chars = r"""+$^_-*~@.,()[]{}<>`\|/"'=1234567890%?!# """
+strip_chars = r"""+$^_-*~@.,()[]{}<>`\|/"'=1234567890%?!#:; """
 stopwords = [w.strip() for w in open("stopwords.txt")] # nltk.corpus.stopwords.words('english')
 stemmer = nltk.stem.LancasterStemmer()
 

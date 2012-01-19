@@ -17,13 +17,6 @@ def do_analysis():
     tmp, n = get_recent_listings()
     analyse_listings(n=n+1)
 
-# def do_sched():
-#     s.enterabs(get_time(), 1, do_analysis, ())
-#     print "Queue:"
-#     print "------"
-#     print s.queue
-#     s.run()
-
 while True:
     do_analysis()
     dt = get_time()-time.time()
