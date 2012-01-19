@@ -19,8 +19,10 @@ import db
 
 root_ns  = lambda x: './/{http://www.openarchives.org/OAI/2.0/}'+x
 arxiv_ns = lambda x: './/{http://arxiv.org/OAI/arXiv/}'+x
-fields = ['title', 'abstract', 'id', 'license']
-dates  = ['created', 'updated']
+fields = ['title', 'abstract', 'id', 'license', 'comments', 'report-no',
+        'journal-ref', 'doi']
+dates  = {'created': arxiv_ns('created'), 'updated': arxiv_ns('updated'),
+        'datestamp': root_ns('datestamp')}
 strip_chars = r"""+$^_-*~@.,()[]{}<>`\|/"'=1234567890%?!#:; """
 stopwords = [w.strip() for w in open("stopwords.txt")] # nltk.corpus.stopwords.words('english')
 stemmer = nltk.stem.LancasterStemmer()
@@ -28,14 +30,13 @@ stemmer = nltk.stem.LancasterStemmer()
 def analyse_listings(fn='arXiv_recent', n=1):
     tree = ElementTree()
     for i in xrange(n):
-        print "Page:", i
+        print "Analysing page:", i
         tree.parse(fn+".%d.xml"%i)
         records = tree.findall(root_ns('record'))
         for record in records:
-            strt = time.time()
             doc = {}
             for d in dates:
-                el = record.find(arxiv_ns(d))
+                el = record.find(dates[d])
                 if el is not None:
                     doc[d] = datetime.datetime.strptime(el.text, '%Y-%m-%d')
             for f in fields:
@@ -60,7 +61,6 @@ def analyse_listings(fn='arXiv_recent', n=1):
             # push doc to MongoDB
             doc["_id"] = db.doc_counter()
             db.listings.update({"_id": doc["_id"]}, doc, upsert=True)
-            # print time.time()-strt,"seconds"
 
 def extract_features(doc):
     if "abstract" not in doc or "title" not in doc:
