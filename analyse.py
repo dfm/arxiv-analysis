@@ -68,6 +68,9 @@ def analyse_listings(fn='arXiv_recent', n=1):
             # feature extraction
             doc = extract_features(doc)
 
+            # get a nice new id
+            doc["_id"] = db.doc_counter()
+
             # find previous versions
             versions = [v["_id"] for v in db.listings.find({"id": doc["id"]}, {"_id": 1})]
             if len(versions) > 0:
@@ -79,7 +82,6 @@ def analyse_listings(fn='arXiv_recent', n=1):
             db.corpus.update({"_id": 0}, {"$inc": doc["vector"]}, upsert=True, safe=True)
 
             # push doc to MongoDB
-            doc["_id"] = db.doc_counter()
             db.listings.update({"_id": doc["_id"]}, doc, upsert=True)
 
 def extract_features(doc):
