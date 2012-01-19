@@ -72,6 +72,8 @@ def analyse_listings(fn='arXiv_recent', n=1):
             versions = [v["_id"] for v in db.listings.find({"id": doc["id"]}, {"_id": 1})]
             if len(versions) > 0:
                 doc["versions"] = versions
+                db.listings.update({"_id": {"$in": versions}},
+                        {"$push": {"newer": doc["_id"]}})
 
             # update the corpus
             db.corpus.update({"_id": 0}, {"$inc": doc["vector"]}, upsert=True, safe=True)
