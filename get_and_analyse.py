@@ -17,9 +17,9 @@ def do_analysis():
     tmp, n = get_recent_listings()
     analyse_listings(n=n+1)
 
-while True:
-    do_analysis()
-    dt = get_time()-time.time()
-    print "delay: ",dt
-    time.sleep(dt)
+# while True:
+#     do_analysis()
+#     dt = get_time()-time.time()
+#     print "delay: ",dt
+#     time.sleep(dt)
 
