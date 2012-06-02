@@ -73,8 +73,6 @@ def build_vector(txt):
 
 def analyse(record):
     """Analyse a record dictionary and return it."""
-    s = time.time()
-
     # Parse the categories.
     cats = record.pop("categories", "").split()
     record["categories"] = []
@@ -105,8 +103,6 @@ def analyse(record):
 
     # Update the corpus word vector.
     db.corpus.update({"_id": 0}, {"$inc": vec}, upsert=True)
-
-    print time.time() - s, "seconds"
 
     return record
 
@@ -214,16 +210,56 @@ def parse(data):
     return records
 
 
+def do_analysis():
+    now = datetime.datetime.now()
+
+    # See when the next update was scheduled.
+    next_update = db.corpus.find_one({"_id": 1})
+    if next_update is not None:
+        date = next_update["date"]
+
+        # Make sure that we've passed the date of the next update.
+        if now < date:
+            dt = time.mktime(date.timetuple()) - time.time()
+            print("Too soon! Waiting {0:.4f} seconds.".format(dt))
+            return dt
+    else:
+        date = now
+
+    print("Starting an analysis run {0}.".format(now))
+    print("The start date is set to {0}.".format(date))
+
+    date -= datetime.timedelta(days=1)
+
+    # Get the records.
+    rs = map(parse, get(date.strftime("%Y-%m-%d")))
+    records = []
+    for r in rs:
+        records += r
+
+    if len(records) > 0:
+        print("Got {0:d} records.".format(len(records)))
+
+        # Run the analysis.
+        start = time.time()
+        map(analyse, records)
+        print("Analysis took {0:.3f} seconds".format(time.time() - start))
+    else:
+        print("No records returned")
+
+    # Update the next update schedule.
+    now += datetime.timedelta(days=1)
+    now = now.replace(hour=0, minute=0, second=0)
+    db.corpus.update({"_id": 1}, {"_id": 1, "date": now}, upsert=True)
+
+    dt = time.mktime(now.timetuple()) - time.time()
+    print("Next update scheduled for {0} ({1:.4f} seconds from now)."
+            .format(now, dt))
+
+    return dt
+
+
 if __name__ == "__main__":
-    # listings = get((datetime.datetime.utcnow() - datetime.timedelta(1))
-    #             .strftime("%Y-%m-%d"))
-    # for i, l in enumerate(listings):
-    #     open("example-{0:d}.dat".format(i), "w").write(l)
-
-    data = open("example-0.dat").read()
-    records = parse(data)
-
-    s = time.time()
-    map(analyse, records)
-    print "total:", time.time() - s, "seconds"
-    print len(records), "records"
+    while True:
+        dt = do_analysis()
+        time.sleep(dt)
