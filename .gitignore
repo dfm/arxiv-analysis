@@ -13,3 +13,4 @@ lib
 arxiv/*
 *.dat
 bkp
+config.sh
