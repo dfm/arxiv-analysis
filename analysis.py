@@ -229,9 +229,10 @@ def do_analysis(force=False, delta=1):
         date = now
 
     print("Starting an analysis run {0}.".format(now))
-    print("The start date is set to {0}.".format(date))
 
     date -= datetime.timedelta(days=delta)
+
+    print("The start date is set to {0}.".format(date))
 
     # Get the records.
     rs = map(parse, get(date.strftime("%Y-%m-%d")))
