@@ -3,10 +3,12 @@ import datetime
 import time
 
 from collections import defaultdict
-from xml.etree.ElementTree import ElementTree
+import xml.etree.cElementTree as ElementTree
 
 import nltk
 import requests
+
+import db
 
 
 # ArXiv info.
@@ -24,6 +26,91 @@ stopwords = [w.strip() for w in open("stopwords.txt")]
 stemmer = nltk.stem.LancasterStemmer()
 
 
+# Hackish XML parsing hacks.
+root_ns = lambda x: ".//{http://www.openarchives.org/OAI/2.0/}" + x
+arxiv_ns = lambda x: ".//{http://arxiv.org/OAI/arXivRaw/}" + x
+strip_ns = re.compile("{0}(.*)".format(arxiv_ns("")[3:]))
+
+
+# The list of fields to grab from the XML.
+fields = ["title", "abstract", "id", "license", "comments", "report-no",
+          "journal-ref", "doi", "submitter", "authors", "categories",
+          "acm-class"]
+
+
+# The datetime format for the versions.
+version_dt_fmt = "%a, %d %b %Y %H:%M:%S GMT"
+
+
+# Category conversions.
+cat_conv = {"hep-th": "hep.th", "hep-ex": "hep.ex", "hep-lat": "hep.lat",
+        "hep-ph": "hep.ph", "nucl-ex": "nucl.ex", "nucl-th": "nucl.th"}
+
+
+# Author list regular expressions.
+au_split = re.compile(",|(?:\\band\\b)")
+
+
+def build_vector(txt):
+    """Build a word vector from a string of text."""
+    # Tokenize the text.
+    tokens = [t.strip(strip_chars).lower()
+            for t in nltk.wordpunct_tokenize(txt)]
+
+    # Ignore the stopwords.
+    tokens = [stemmer.stem(t) for t in tokens if t not in stopwords]
+
+    # Build the vector.
+    vec = defaultdict(int)
+    norm = 0.0
+    for t in tokens:
+        if len(t) > 0:
+            vec[t] += 1
+            norm += 1.0
+
+    return vec
+
+
+def analyse(record):
+    """Analyse a record dictionary and return it."""
+    s = time.time()
+
+    # Parse the categories.
+    cats = record.pop("categories", "").split()
+    record["categories"] = []
+
+    # Do the category conversions.
+    for c in cats:
+        record["categories"].append(cat_conv.get(c, c))
+
+    # Parse the author list.
+    record["authors"] = au_split.split(record["authors"])
+
+    # Build the word vector from the title and abstract.
+    vec = build_vector(" ".join([record["title"], record["abstract"]]))
+    record["word_vector"] = vec
+
+    # Sort the versions.
+    record["versions"] = sorted(record["versions"], key=lambda r: r["date"])
+    record["nversions"] = len(record["versions"])
+
+    # Set the datestamp to the most recent version.
+    record["datestamp"] = record["versions"][-1]["date"]
+
+    # Set up the ids.
+    record["_id"] = record.pop("id")
+
+    # Update the database.
+    db.records.update({"_id": record["_id"]}, record, upsert=True)
+
+    # Update the corpus word vector.
+    db.corpus.update({"_id": 0}, {"$inc": vec}, upsert=True)
+
+    print time.time() - s, "seconds"
+
+    return record
+
+
 def get(date, max_tries=40):
     """
     Get listings from the ArXiv.
@@ -38,7 +125,7 @@ def get(date, max_tries=40):
     * `results` (list): A list of the XML data (as strings) returned.
 
     """
-    req = {"verb": "ListRecords", "from": date, "metadataPrefix": "arXiv"}
+    req = {"verb": "ListRecords", "from": date, "metadataPrefix": "arXivRaw"}
 
     results = []
 
@@ -86,12 +173,57 @@ def get(date, max_tries=40):
     return results
 
 
-def analyse(data):
-    pass
+def parse(data):
+    records = []
+
+    # Parse the XML string.
+    tree = ElementTree.fromstring(data)
+    record_list = tree.findall(root_ns("record"))
+    for record in record_list:
+        doc = {}
+
+        # Loop over the children.
+        for n in record.find(root_ns("metadata")).find(arxiv_ns("arXivRaw")):
+            tag = strip_ns.findall(n.tag)[0]
+            if tag not in ["version"]:
+                doc[tag] = n.text
+
+        # Get the datestamp.
+        el = record.find(root_ns("datestamp"))
+        if el is not None:
+            doc["datestamp"] = datetime.datetime.strptime(el.text, "%Y-%m-%d")
+
+        # Parse the versions.
+        versions = record.findall(arxiv_ns("version"))
+        doc["versions"] = []
+        for v in versions:
+            el = v.find(arxiv_ns("date"))
+            if el is not None:
+                rev = v.get("version")
+                d = datetime.datetime.strptime(el.text, version_dt_fmt)
+                doc["versions"].append({"version": rev, "date": d})
+
+        # Parse the tags.
+        for f in fields:
+            el = record.find(arxiv_ns(f))
+            if el is not None:
+                doc[f] = el.text
+
+        records.append(doc)
+
+    return records
 
 
 if __name__ == "__main__":
-    listings = get((datetime.datetime.utcnow() - datetime.timedelta(1))
-                .strftime("%Y-%m-%d"))
-    for i, l in enumerate(listings):
-        open("example-{0:d}.dat".format(i), "w").write(l)
+    # listings = get((datetime.datetime.utcnow() - datetime.timedelta(1))
+    #             .strftime("%Y-%m-%d"))
+    # for i, l in enumerate(listings):
+    #     open("example-{0:d}.dat".format(i), "w").write(l)
+
+    data = open("example-0.dat").read()
+    records = parse(data)
+
+    s = time.time()
+    map(analyse, records)
+    print "total:", time.time() - s, "seconds"
+    print len(records), "records"
