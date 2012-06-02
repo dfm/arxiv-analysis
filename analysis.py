@@ -210,7 +210,7 @@ def parse(data):
     return records
 
 
-def do_analysis():
+def do_analysis(force=False, delta=1):
     now = datetime.datetime.now()
 
     # See when the next update was scheduled.
@@ -219,7 +219,7 @@ def do_analysis():
         date = next_update["date"]
 
         # Make sure that we've passed the date of the next update.
-        if now < date:
+        if not force and now < date:
             dt = time.mktime(date.timetuple()) - time.time()
             print("Too soon! Waiting {0:.4f} seconds.".format(dt))
             return dt
@@ -229,7 +229,7 @@ def do_analysis():
     print("Starting an analysis run {0}.".format(now))
     print("The start date is set to {0}.".format(date))
 
-    date -= datetime.timedelta(days=1)
+    date -= datetime.timedelta(days=delta)
 
     # Get the records.
     rs = map(parse, get(date.strftime("%Y-%m-%d")))
@@ -260,6 +260,13 @@ def do_analysis():
 
 
 if __name__ == "__main__":
+    import sys
+
+    if "--force" in sys.argv:
+        dt = do_analysis(force=True)
+    elif len(sys.argv) == 2:
+        dt = do_analysis(force=True, delta=int(sys.argv[1]))
+
     while True:
         dt = do_analysis()
         time.sleep(dt)
