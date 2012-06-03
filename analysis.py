@@ -224,7 +224,7 @@ def do_analysis(force=False, delta=1):
         if not force and now < date:
             dt = time.mktime(date.timetuple()) - time.time()
             print("Too soon! Waiting {0:.4f} seconds.".format(dt))
-            return dt
+            return max(0, dt)
     else:
         date = now
 
@@ -259,7 +259,7 @@ def do_analysis(force=False, delta=1):
     print("Next update scheduled for {0} ({1:.4f} seconds from now)."
             .format(now, dt))
 
-    return dt
+    return max(0, dt)
 
 
 if __name__ == "__main__":
