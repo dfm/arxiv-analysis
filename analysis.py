@@ -98,10 +98,10 @@ def analyse(record):
     record["datestamp"] = record["versions"][-1]["date"]
 
     # Set up the ids.
-    record["_id"] = record.pop("id")
+    record["arxivid"] = record.pop("id")
 
     # Update the database.
-    db.records.update({"_id": record["_id"]}, record, upsert=True)
+    db.records.update({"arxivid": record["arxivid"]}, record, upsert=True)
 
     # Update the corpus word vector.
     db.corpus.update({"_id": 0}, {"$inc": vec}, upsert=True)
