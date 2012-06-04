@@ -252,7 +252,7 @@ def do_analysis(force=False, delta=1):
 
     # Update the next update schedule.
     now += datetime.timedelta(days=1)
-    now = now.replace(hour=0, minute=0, second=0)
+    now = now.replace(hour=3, minute=0, second=0)
     db.corpus.update({"_id": 1}, {"_id": 1, "date": now}, upsert=True)
 
     dt = time.mktime(now.timetuple()) - time.time()
