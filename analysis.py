@@ -149,11 +149,14 @@ def get(date, max_tries=40):
 
             # Look for a resumption token.
             token = resume_re.search(content)
+            if token is None:
+                break
+            token = token.groups()[0]
 
             print("Resumption token: {0}.".format(token))
 
             # If there isn't one, we're all done.
-            if token == "" or token is None:
+            if token == "":
                 break
 
             # If there is a resumption token, rebuild the request.
