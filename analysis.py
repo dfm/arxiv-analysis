@@ -19,7 +19,7 @@ arXiv_header = {"Content-type": "application/x-www-form-urlencoded"}
 
 
 # Regular expression to the find the resumption token.
-resume_re = re.compile(".*<resumptionToken.*?>(.*?)</resumptionToken>.*")
+resume_re = re.compile(r".*<resumptionToken.*?>(.*?)</resumptionToken>.*")
 
 
 # NLP setup.
@@ -30,7 +30,7 @@ stemmer = nltk.stem.LancasterStemmer()
 
 # Hackish XML parsing hacks.
 root_ns = lambda x: ".//{http://www.openarchives.org/OAI/2.0/}" + x
-arxiv_ns = lambda x: ".//{http://arxiv.org/OAI/arXivRaw/}" + x
+arxiv_ns = lambda x: ".//{http://arxiv.org/OAI/arXiv/}" + x
 strip_ns = re.compile("{0}(.*)".format(arxiv_ns("")[3:]))
 
 
@@ -40,17 +40,18 @@ fields = ["title", "abstract", "id", "license", "comments", "report-no",
           "acm-class"]
 
 
-# The datetime format for the versions.
-version_dt_fmt = "%a, %d %b %Y %H:%M:%S GMT"
-
-
 # Category conversions.
 cat_conv = {"hep-th": "hep.th", "hep-ex": "hep.ex", "hep-lat": "hep.lat",
         "hep-ph": "hep.ph", "nucl-ex": "nucl.ex", "nucl-th": "nucl.th"}
 
 
 # Author list regular expressions.
-au_split = re.compile(",|(?:\\band\\b)")
+au_affil = re.compile(r"(.*?)(?:\((?=\()(.*)\))", re.M | re.S)
+au_split = re.compile(r",|(?:\band\b)", re.M | re.S)
+au_re = re.compile(r"(?:(.*)\s\((.*)\))|(.*)", re.M | re.S)
+affil_re = re.compile(r"\((.*?)\)\s*(.*?)(?:(?:,\s*)|(?:\s*))(?=\(|$)",
+        re.M | re.S)
+ws_re = re.compile(r"\s", re.M | re.S)
 
 
 def build_vector(txt):
@@ -70,7 +71,7 @@ def build_vector(txt):
             vec[t] += 1
             norm += 1.0
 
-    return vec
+    return vec, norm
 
 
 def analyse(record):
@@ -83,28 +84,16 @@ def analyse(record):
     for c in cats:
         record["categories"].append(cat_conv.get(c, c))
 
-    # Parse the author list.
-    record["authors"] = au_split.split(record["authors"])
-
     # Build the word vector from the title and abstract.
-    vec = build_vector(" ".join([record["title"], record["abstract"]]))
+    vec, norm = build_vector(" ".join([record["title"], record["abstract"]]))
     record["word_vector"] = vec
-
-    # Sort the versions.
-    record["versions"] = sorted(record["versions"], key=lambda r: r["date"])
-    record["nversions"] = len(record["versions"])
-
-    # Set the datestamp to the most recent version.
-    record["datestamp"] = record["versions"][-1]["date"]
+    record["word_vector_norm"] = norm
 
     # Set up the ids.
     record["arxivid"] = record.pop("id")
 
     # Update the database.
     db.records.update({"arxivid": record["arxivid"]}, record, upsert=True)
-
-    # Update the corpus word vector.
-    db.corpus.update({"_id": 0}, {"$inc": vec}, upsert=True)
 
     return record
 
@@ -123,7 +112,7 @@ def get(date, max_tries=40):
     * `results` (list): A list of the XML data (as strings) returned.
 
     """
-    req = {"verb": "ListRecords", "from": date, "metadataPrefix": "arXivRaw"}
+    req = {"verb": "ListRecords", "from": date, "metadataPrefix": "arXiv"}
 
     results = []
 
@@ -184,9 +173,9 @@ def parse(data):
         doc = {}
 
         # Loop over the children.
-        for n in record.find(root_ns("metadata")).find(arxiv_ns("arXivRaw")):
+        for n in record.find(root_ns("metadata")).find(arxiv_ns("arXiv")):
             tag = strip_ns.findall(n.tag)[0]
-            if tag not in ["version"]:
+            if tag not in ["author"]:
                 doc[tag] = n.text
 
         # Get the datestamp.
@@ -194,15 +183,15 @@ def parse(data):
         if el is not None:
             doc["datestamp"] = datetime.datetime.strptime(el.text, "%Y-%m-%d")
 
-        # Parse the versions.
-        versions = record.findall(arxiv_ns("version"))
-        doc["versions"] = []
-        for v in versions:
-            el = v.find(arxiv_ns("date"))
-            if el is not None:
-                rev = v.get("version")
-                d = datetime.datetime.strptime(el.text, version_dt_fmt)
-                doc["versions"].append({"version": rev, "date": d})
+        # Parse the authors.
+        authors = []
+        for a in record.find(arxiv_ns("authors")).findall(arxiv_ns("author")):
+            authors.append({})
+            for k in ["keyname", "forenames", "affiliation"]:
+                el = a.find(arxiv_ns(k))
+                if el is not None:
+                    authors[-1][k] = el.text.replace(" -", "-")
+        doc["authors"] = authors
 
         # Parse the tags.
         for f in fields:
