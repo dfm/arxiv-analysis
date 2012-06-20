@@ -36,7 +36,7 @@ strip_ns = re.compile("{0}(.*)".format(arxiv_ns("")[3:]))
 
 # The list of fields to grab from the XML.
 fields = ["title", "abstract", "id", "license", "comments", "report-no",
-          "journal-ref", "doi", "submitter", "authors", "categories",
+          "journal-ref", "doi", "submitter", "categories",
           "acm-class"]
 
 
@@ -178,6 +178,12 @@ def parse(data):
             if tag not in ["author"]:
                 doc[tag] = n.text
 
+        # Parse the tags.
+        for f in fields:
+            el = record.find(arxiv_ns(f))
+            if el is not None:
+                doc[f] = el.text
+
         # Get the datestamp.
         el = record.find(root_ns("datestamp"))
         if el is not None:
@@ -192,12 +198,6 @@ def parse(data):
                 if el is not None:
                     authors[-1][k] = el.text.replace(" -", "-")
         doc["authors"] = authors
-
-        # Parse the tags.
-        for f in fields:
-            el = record.find(arxiv_ns(f))
-            if el is not None:
-                doc[f] = el.text
 
         records.append(doc)
 
