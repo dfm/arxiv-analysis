@@ -91,6 +91,7 @@ def analyse(record):
 
     # Set up the ids.
     record["arxivid"] = record.pop("id")
+    record["_id"] = db.doc_counter()
 
     # Update the database.
     db.records.update({"arxivid": record["arxivid"]}, record, upsert=True)
