@@ -196,7 +196,7 @@ def parse(data):
             authors.append({})
             for k in ["keyname", "forenames", "affiliation"]:
                 el = a.find(arxiv_ns(k))
-                if el is not None:
+                if el is not None and el.text is not None:
                     authors[-1][k] = el.text.replace(" -", "-")
         doc["authors"] = authors
 
