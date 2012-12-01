@@ -3,3 +3,4 @@
 *.pyc
 records
 venv
+settings.sh
