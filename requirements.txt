@@ -1,4 +1,0 @@
-numpy==1.6.2
-nltk==2.0.1
-requests==0.13.0
-pymongo==2.2
