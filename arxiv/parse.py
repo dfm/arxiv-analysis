@@ -11,8 +11,14 @@ import pymongo
 
 record_tag = u".//{http://www.openarchives.org/OAI/2.0/}record"
 ns_re = re.compile(r"\{(?:.*?)\}(.*)")
-au_re = re.compile(r"(.*?)(?:(?:\s*\((.*?)\))|(?:\s*))(?:(?:, )|(?: and )|(?:\s*$))")
 date_fmt = u"%a, %d %b %Y %H:%M:%S %Z"
+
+comma_and = r"(?:,* and )|(?:, )"
+ca_re = re.compile(comma_and)
+au_re = re.compile(r"(.+?)(?:" + comma_and + "|(?:\s*$))")
+
+affil_re = re.compile(r"(.*?)(?:\((.*)\)|$)")
+affils_re = re.compile(r"\(([0-9]+)\) (.*?)(?=(?:, \()|\))")
 
 
 server = os.environ.get(u"MONGO_SERVER", "localhost")
@@ -35,20 +41,37 @@ def parse_one(f):
                     doc[unicode(k.lower())] = unicode(v)
             elif txt.strip() != u"":
                 k = unicode(ns_re.search(el.tag).groups()[0].lower())
-                txt = unicode(txt.strip())
+                txt = unicode(txt.strip().replace(u"\n", u""))
                 if k == u"date":
                     txt = datetime.strptime(txt, date_fmt)
                 elif k == u"categories":
                     txt = [c.strip() for c in txt.split()]
                 elif k == u"authors":
-                    doc[u"author_list"] = [(a[0].strip().strip(u","),
-                                            a[1].strip().strip(u","))
-                                    for a in au_re.findall(txt.strip())[:-1]]
-                    if any([a[1] != u"" for a in doc[u"author_list"]]):
-                        print(txt, doc[u"author_list"])
-                        assert 0
+                    spl = txt.split(u"((")
+                    if len(spl) > 1:
+                        authors, affils = spl
+                        affils = dict(affils_re.findall(u"(" + affils))
+                    else:
+                        authors, affils = txt, {}
+                    authors = [affil_re.findall(a.strip())[0]
+                                            for a in au_re.findall(authors)]
+                    doc[u"authors"] = []
+                    for a in authors:
+                        if len(a[1]) > 0 and a[1][0] in u"1234567890":
+                            doc[u"authors"].append({u"name": a[0],
+                                    u"affil": ", ".join([affils.get(af.strip(),
+                                                                    af.strip())
+                                        for af in ca_re.split(a[1])])})
+                        else:
+                            doc[u"authors"].append({u"name": a[0],
+                                u"affil": a[1].strip()})
+
+                    k = u"authors_raw"
+
                 doc[k] = txt
+
         coll.insert(doc)
+
     print(u"Finished {0}".format(f))
 
 
@@ -59,5 +82,4 @@ def parse(fns):
 
 if __name__ == "__main__":
     import sys
-
     parse(sys.argv[1:])
