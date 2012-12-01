@@ -11,6 +11,7 @@ import pymongo
 
 record_tag = u".//{http://www.openarchives.org/OAI/2.0/}record"
 ns_re = re.compile(r"\{(?:.*?)\}(.*)")
+au_re = re.compile(r"(.*?)(?:(?:\s*\((.*?)\))|(?:\s*))(?:(?:, )|(?: and )|(?:\s*$))")
 date_fmt = u"%a, %d %b %Y %H:%M:%S %Z"
 
 
@@ -39,6 +40,13 @@ def parse_one(f):
                     txt = datetime.strptime(txt, date_fmt)
                 elif k == u"categories":
                     txt = [c.strip() for c in txt.split()]
+                elif k == u"authors":
+                    doc[u"author_list"] = [(a[0].strip().strip(u","),
+                                            a[1].strip().strip(u","))
+                                    for a in au_re.findall(txt.strip())[:-1]]
+                    if any([a[1] != u"" for a in doc[u"author_list"]]):
+                        print(txt, doc[u"author_list"])
+                        assert 0
                 doc[k] = txt
         coll.insert(doc)
     print(u"Finished {0}".format(f))
