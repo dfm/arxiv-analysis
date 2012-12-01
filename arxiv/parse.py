@@ -1,6 +1,9 @@
+import os
 import re
 from datetime import datetime
 import xml.etree.cElementTree as ET
+
+import pymongo
 
 
 record_tag = u".//{http://www.openarchives.org/OAI/2.0/}record"
@@ -8,7 +11,12 @@ ns_re = re.compile(r"\{(?:.*?)\}(.*)")
 date_fmt = u"%a, %d %b %Y %H:%M:%S %Z"
 
 
+server = os.environ.get(u"MONGO_SERVER", "localhost")
+port = int(os.environ.get(u"MONGO_PORT", 27017))
+
+
 def parse(fns):
+    db = pymongo.Connection(server, port).arxiv
     for f in fns:
         tree = ET.parse(f)
         root = tree.getroot()
