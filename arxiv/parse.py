@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import os
 import re
+import random
 from datetime import datetime
 import xml.etree.cElementTree as ET
 from multiprocessing import Pool
@@ -13,12 +14,12 @@ record_tag = u".//{http://www.openarchives.org/OAI/2.0/}record"
 ns_re = re.compile(r"\{(?:.*?)\}(.*)")
 date_fmt = u"%a, %d %b %Y %H:%M:%S %Z"
 
-comma_and = r"(?:,* and )|(?:, )"
+comma_and = r"(?:,* and )|(?:,\s*)"
 ca_re = re.compile(comma_and)
 au_re = re.compile(r"(.+?)(?:" + comma_and + "|(?:\s*$))")
 
 affil_re = re.compile(r"(.*?)(?:\((.*)\)|$)")
-affils_re = re.compile(r"\(([0-9]+)\) (.*?)(?=(?:, \()|\))")
+affils_re = re.compile(r"\(([0-9]+)\) (.*?)(?=(?:,*\s*\()|\))")
 
 
 server = os.environ.get(u"MONGO_SERVER", "localhost")
@@ -41,14 +42,17 @@ def parse_one(f):
                     doc[unicode(k.lower())] = unicode(v)
             elif txt.strip() != u"":
                 k = unicode(ns_re.search(el.tag).groups()[0].lower())
-                txt = unicode(txt.strip().replace(u"\n", u""))
+                txt = unicode(txt.strip())
+
                 if k == u"date":
                     txt = datetime.strptime(txt, date_fmt)
                 elif k == u"categories":
                     txt = [c.strip() for c in txt.split()]
                 elif k == u"authors":
-                    spl = txt.split(u"((")
+                    spl = txt.replace(u"\n", u"").split(u"((")
                     if len(spl) > 1:
+                        if len(spl) > 2:
+                            spl = [spl[0], u"(".join(spl[1:])]
                         authors, affils = spl
                         affils = dict(affils_re.findall(u"(" + affils))
                     else:
@@ -70,6 +74,8 @@ def parse_one(f):
 
                 doc[k] = txt
 
+        # Add a random number for selecting random documents later.
+        doc[u"random"] = random.random()
         coll.insert(doc)
 
     print(u"Finished {0}".format(f))
