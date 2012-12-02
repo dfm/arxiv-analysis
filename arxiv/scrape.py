@@ -2,6 +2,8 @@
 
 from __future__ import print_function
 
+__all__ = [u"get"]
+
 import os
 import re
 import time
