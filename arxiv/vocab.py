@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-__all__ = [u"process"]
+__all__ = [u"build_vocab", u"get_vocab"]
 
 import os
 import sys
@@ -33,7 +33,8 @@ def process_one(doc):
     pipe.execute()
 
 
-def process():
+def build_vocab():
+    rdb.flushall()
     coll = db.abstracts
 
     print(u"Fetching a list of documents from mongo...")
@@ -44,5 +45,6 @@ def process():
     pool.map(process_one, docs)
 
 
-if __name__ == "__main__":
-    process()
+def get_vocab(initial=100, N=5000):
+    for w in rdb.zrevrange(u"vocab", initial, initial + N):
+        print(w)

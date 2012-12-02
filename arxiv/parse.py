@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+__all__ = [u"parse"]
+
 import os
 import re
 import random
@@ -7,7 +9,7 @@ from datetime import datetime
 import xml.etree.cElementTree as ET
 from multiprocessing import Pool
 
-import pymongo
+from .db_utils import db
 
 
 record_tag = u".//{http://www.openarchives.org/OAI/2.0/}record"
@@ -28,7 +30,6 @@ port = int(os.environ.get(u"MONGO_PORT", 27017))
 
 def parse_one(f):
     print(u"Starting: {0}".format(f))
-    db = pymongo.Connection(server, port).arxiv
     coll = db.abstracts
 
     tree = ET.parse(f)
