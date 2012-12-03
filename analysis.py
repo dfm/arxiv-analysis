@@ -42,11 +42,10 @@ if __name__ == "__main__":
         arxiv.get_vocab(initial=initial, N=N)
 
     if cmd in [u"run", u"results"]:
-        fn = os.path.join(os.path.dirname(os.path.abspath(arxiv.__file__)),
-                          u"vocab.txt")
+        fn = sys.argv[2]
         vocab = [l.strip() for l in open(fn)]
 
-    if sys.argv[1] == u"run":
+    if cmd == u"run":
         print(u"Running online LDA...")
         coll = db.abstracts
         coll.ensure_index(u"random")
@@ -79,7 +78,7 @@ if __name__ == "__main__":
 
     if cmd == u"results":
         print(u"Displaying results...")
-        fn = sys.argv[2]
+        fn = sys.argv[3]
         lam = np.loadtxt(fn)
 
         for i, l in enumerate(lam.T):
