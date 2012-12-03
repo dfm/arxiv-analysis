@@ -17,7 +17,8 @@ The code depends on the Python packages: `numpy`, `scipy`, `requests`,
 * `mkdir abstracts`
 * `./analysis.py scrape abstracts` — scrapes all the metadata from the arXiv
   [OAI interface](http://arxiv.org/help/oa/index) and saves the raw XML
-  responses as `abstracts/raw-*.xml`.
+  responses as `abstracts/raw-*.xml`. This takes a _long time_ because of
+  the arXiv's flow control policies. It took me approximately 6 hours.
 * `./analysis.py parse abstracts/raw-*.xml` — parses the raw responses and
   saves the abstracts to a MongoDB database called `arxiv` in the collection
   called `abstracts`.
