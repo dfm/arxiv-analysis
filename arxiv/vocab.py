@@ -2,17 +2,11 @@ from __future__ import print_function
 
 __all__ = [u"build_vocab", u"get_vocab"]
 
-import os
 import sys
 from multiprocessing import Pool
 
 from .db_utils import db, rdb
-
-punct = u".,?![]{}();:\"'=$<>\\/|%^&#"
-
-# Load in the list of stop words.
-stopfn = os.path.join(os.path.dirname(os.path.abspath(__file__)), u"stops.txt")
-stops = [line.strip() for line in open(stopfn)]
+from .text_utils import tokenize_document
 
 
 def process_one(doc):
@@ -23,9 +17,7 @@ def process_one(doc):
         sys.stdout.write(u".")
         sys.stdout.flush()
 
-    txt = doc[u"title"] + doc[u"abstract"]
-    tokens = [t.lower().strip(punct) for t in txt.split()]
-    tokens = [t for t in tokens if t not in stops and len(t) > 2]
+    tokens = tokenize_document(doc[u"title"] + u" " + doc[u"abstract"])
 
     pipe = rdb.pipeline()
     for t in tokens:
