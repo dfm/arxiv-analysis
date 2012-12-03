@@ -20,6 +20,15 @@ from arxiv.db_utils import db
 if __name__ == "__main__":
     cmd = sys.argv[1]
 
+    if cmd == u"get-vocab":
+        initial, N = 1000, 5000
+        if len(sys.argv) >= 3:
+            initial = int(sys.argv[2])
+        elif len(sys.argv) >= 4:
+            N = int(sys.argv[3])
+
+        arxiv.get_vocab(initial=initial, N=N)
+
     if cmd in [u"run", u"results"]:
         fn = os.path.join(os.path.dirname(os.path.abspath(arxiv.__file__)),
                           u"vocab.txt")
