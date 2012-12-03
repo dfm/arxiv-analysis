@@ -51,12 +51,12 @@ if __name__ == "__main__":
         coll = db.abstracts
         coll.ensure_index(u"random")
 
-        batch_size = 128
+        batch_size = 500
         ndocs = coll.count()
         ntopics = 100
 
         lda = arxiv.LDA(vocab, ntopics, ndocs, 1.0 / ntopics, 1.0 / ntopics,
-                        1025.0, 0.7)
+                        1025.0, 0.8)
 
         iteration = 0
         while 1:
