@@ -38,7 +38,10 @@ class LDA:
         stats = np.zeros_like(self.lam)
 
         for i, doc in enumerate(docs):
-            word_ids, word_counts = zip(*[w for w in doc.iteritems()])
+            try:
+                word_ids, word_counts = zip(*[w for w in doc.iteritems()])
+            except ValueError:
+                continue
             word_ids = np.array(word_ids, dtype=int)
             word_counts = np.array(word_counts, dtype=int)
             gamma_d = gamma[i]
@@ -86,7 +89,10 @@ class LDA:
         fullnorm = 0.0
 
         for i, doc in enumerate(docs):
-            word_ids, word_counts = zip(*[w for w in doc.iteritems()])
+            try:
+                word_ids, word_counts = zip(*[w for w in doc.iteritems()])
+            except ValueError:
+                continue
             word_ids = np.array(word_ids, dtype=int)
             word_counts = np.array(word_counts, dtype=int)
             norm = np.zeros(len(word_ids))

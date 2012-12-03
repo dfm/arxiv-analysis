@@ -17,5 +17,5 @@ def tokenize_document(txt, vocab=None):
     d = defaultdict(int)
     for t in tokens:
         if t in vocab:
-            d[vocab.index(t)] += 1
+            d[unicode(vocab.index(t))] += 1
     return d

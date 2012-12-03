@@ -20,6 +20,18 @@ from arxiv.db_utils import db
 if __name__ == "__main__":
     cmd = sys.argv[1]
 
+    if cmd == u"scrape":
+        print(u"Scraping all the meta-data from the arxiv...")
+        arxiv.get()
+
+    if cmd == u"parse":
+        print(u"Parsing the XML...")
+        arxiv.parse()
+
+    if cmd == u"build-vocab":
+        print(u"Building the vocabulary list...")
+        arxiv.build_vocab()
+
     if cmd == u"get-vocab":
         initial, N = 1000, 5000
         if len(sys.argv) >= 3:
@@ -35,6 +47,7 @@ if __name__ == "__main__":
         vocab = [l.strip() for l in open(fn)]
 
     if sys.argv[1] == u"run":
+        print(u"Running online LDA...")
         coll = db.abstracts
         coll.ensure_index(u"random")
 
@@ -43,17 +56,21 @@ if __name__ == "__main__":
         ntopics = 100
 
         lda = arxiv.LDA(vocab, ntopics, ndocs, 1.0 / ntopics, 1.0 / ntopics,
-                        1024.0, 0.7)
+                        1025.0, 0.7)
 
         iteration = 0
         while 1:
             docs = []
             ind = np.random.randint(ndocs - batch_size)
-            docs = [d[u"title"] + u" " + d[u"abstract"] for d in
-                            coll.find({}, {u"abstract": 1, u"title": 1})
-                                .sort(u"random").skip(ind).limit(batch_size)]
+            cursor = coll.find({}, {u"abstract": 1, u"title": 1}) \
+                         .sort(u"random").skip(ind)
+            for i, d in enumerate(cursor):
+                if i >= batch_size:
+                    break
+                if u"title" in d:
+                    docs.append(d[u"title"] + u" " + d[u"abstract"])
             gamma, lam, bound = lda.update(docs)
-            print(iteration, np.exp(-bound))
+            print(iteration, ind, np.exp(-bound))
 
             if iteration % 10 == 0:
                 np.savetxt(u"lambda-{0}.txt".format(iteration), lam)
@@ -61,15 +78,14 @@ if __name__ == "__main__":
             iteration += 1
 
     if cmd == u"results":
+        print(u"Displaying results...")
         fn = sys.argv[2]
         lam = np.loadtxt(fn)
 
-        for i, l in enumerate(lam):
+        for i, l in enumerate(lam.T):
             l /= np.sum(l)
             tmp = sorted(zip(l, range(len(l))), key=lambda x: x[0],
                                                 reverse=True)
-            print(u"Topic {0}:".format(i))
-            for i in range(50):
-                t = tmp[i]
-                print(u"{0:20s} --- {1:.4f}".format(vocab[t[1]], t[0]))
-            print()
+            print(u"Topic {0}: ".format(i) +
+                  u", ".join([u"{0} ({1:.1f})".format(vocab[t[1]], 100 * t[0])
+                              for t in tmp[:10]]))
