@@ -5,3 +5,5 @@ records
 venv
 settings.sh
 lambda*.txt
+models
+vocab.txt

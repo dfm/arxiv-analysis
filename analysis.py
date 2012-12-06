@@ -50,7 +50,7 @@ if __name__ == "__main__":
         coll = db.abstracts
         coll.ensure_index(u"random")
 
-        batch_size = 500
+        batch_size = 128
         ndocs = coll.count()
         ntopics = 100
 
